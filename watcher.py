@@ -13,7 +13,7 @@ class RenameHTMLHandler(FileSystemEventHandler):
             os.rename(event.src_path, os.path.join('dump', new_name))
             print(f"Renamed {event.src_path} to {new_name}")
             # Run main.py after renaming the .html file
-            subprocess.run(["python", "extract.py"], check=True)
+            subprocess.run(["python", "main.py"], check=True)
             print("main.py executed successfully.")
 
 if __name__ == "__main__":

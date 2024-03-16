@@ -44,28 +44,28 @@ for file_path in glob.glob(file_pattern):
     related_searches_output = ["Explore Related Searches Category Titles:"] + ["- " + title for title in related_searches_titles]
     output_content.extend(related_searches_output)
 
-    # Find and download the first image, skipping .avif files
+    # Find and download the first image, skipping .avif and .webp files
     first_image = soup.find('img')
     if first_image:
         image_url = first_image.get('src')
-        # Skip if the image is in AVIF format
-        if image_url and not image_url.startswith('data:image/avif'):
+        # Skip if the image is in AVIF or WEBP format
+        if image_url and not image_url.startswith('data:image/avif') and not image_url.startswith('data:image/webp'):
             if image_url.startswith('data:image'):
-                # Process base64 encoded images that are not AVIF
+                # Process base64 encoded images that are not AVIF or WEBP
                 header, encoded = image_url.split(",", 1)
                 image_data = base64.b64decode(encoded)
                 image_format = header.split(';')[0].split('/')[1]
-                # Ensure we're not dealing with AVIF format after decoding
-                if image_format.lower() != 'avif':
+                # Ensure we're not dealing with AVIF or WEBP format after decoding
+                if image_format.lower() not in ['avif', 'webp']:
                     image_name = os.path.basename(file_path).replace('.html', f'.{image_format}')  # Adjust the file extension based on the image format
                     image_path = os.path.join(images_folder_path, image_name)
                     with open(image_path, 'wb') as image_file:
                         image_file.write(image_data)
             else:
-                # Handle regular HTTP URL images as before, excluding AVIF format
+                # Handle regular HTTP URL images, excluding AVIF and WEBP format
                 image_response = requests.get(image_url)
-                if image_response.status_code == 200:
-                    image_name = os.path.basename(file_path).replace('.html', '.jpg')  # Use the same base name as the HTML file, assuming non-AVIF
+                if image_response.status_code == 200 and 'image/jpeg' in image_response.headers.get('Content-Type', ''):
+                    image_name = os.path.basename(file_path).replace('.html', '.jpg')  # Use the same base name as the HTML file, assuming JPG
                     image_path = os.path.join(images_folder_path, image_name)
                     with open(image_path, 'wb') as image_file:
                         image_file.write(image_response.content)
@@ -81,12 +81,12 @@ for file_path in glob.glob(file_pattern):
             with open(image_path, 'wb') as image_file:
                 image_file.write(image_response.content)
 
-    # Extract the number from the original HTML file's name
-    file_number = re.search(r'pull_(\d+).html', file_path).group(1)
+    # Instead of extracting a number and constructing a unique markdown file name,
+    # we directly specify the desired output filename.
+    markdown_file_name = 'extracted_html_text.md'
 
-    # Construct the markdown file's name using the extracted number
-    markdown_file_name = f'extracted_{file_number}.md'
-
-    # Write the collected output to the corresponding markdown file
-    with open(markdown_file_name, 'w', encoding='utf-8') as md_file:
-        md_file.write('\n'.join(output_content))
+    # Write the collected output to the specified markdown file.
+    # We open the file in append mode ('a') to ensure that content from multiple HTML files
+    # is appended to the same markdown file instead of overwriting it.
+    with open(markdown_file_name, 'a', encoding='utf-8') as md_file:
+        md_file.write('\n'.join(output_content) + '\n\n')

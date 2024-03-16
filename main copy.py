@@ -4,6 +4,8 @@ import os
 import sys
 import ollama
 import time
+import requests
+from datetime import datetime
 
 # Function to run a script with a filename argument and capture its output
 def run_script(script_name, filename):
@@ -77,6 +79,82 @@ def process_file():
     else:
         print("No pull_* files found in the dump folder.")
 
+    # New functionality to generate and upscale an image based on the final output
+    final_output_file = f"{file_name_without_ext}_final.md"
+    final_output_text = read_final_output(final_output_file)
+    generated_image_path = generate_image_from_text(final_output_text)
+    upscaled_image_path = upscale_image(generated_image_path)
+
+    print(f"Generated image saved at {generated_image_path}")
+    print(f"Upscaled image saved at {upscaled_image_path}")
+
+def read_final_output(file_path):
+    with open(file_path, 'r') as file:
+        return file.read()
+
+def generate_image_from_text(prompt):
+    date_today = datetime.now().strftime("%Y-%m-%d")
+    folder_path = f"focusgen/{date_today}/"
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+    
+    # Pre-check: Get a list of existing files in the directory before making the API call
+    pre_existing_files = set(os.listdir(folder_path))
+    
+    # API call to generate the image
+    url = "http://127.0.0.1:8888/v1/generation/text-to-image"
+    params = {
+        "prompt": prompt,
+        "require_base64": False,
+        "async_process": False  # Assuming synchronous processing for simplicity
+    }
+    response = requests.post(url, json=params)
+    if response.status_code == 200:
+        print("Image generation initiated successfully.")
+        # Monitor the folder for a new file
+        return wait_for_image(folder_path, pre_existing_files)
+    else:
+        raise Exception("Image generation failed", response.text)
+
+def wait_for_image(folder_path, pre_existing_files):
+    print("Waiting for the image to be generated...")
+    start_time = time.time()
+    while True:
+        current_files = set(os.listdir(folder_path))
+        new_files = current_files - pre_existing_files
+        if new_files:
+            new_image_path = os.path.join(folder_path, list(new_files)[0])
+            print(f"New image detected: {new_image_path}")
+            return new_image_path
+        # Check for the new file every 0.1 seconds to reduce delay
+        time.sleep(0.1)
+        # Timeout after 60 seconds to prevent infinite loop
+        if time.time() - start_time > 60:
+            raise TimeoutError("Image generation timed out.")
+
+def upscale_image(image_path):
+    folder_path = os.path.dirname(image_path)
+    existing_files = set(os.listdir(folder_path))
+    
+    url = "http://127.0.0.1:8888/v2/generation/image-upscale-vary"
+    files = {'input_image': open(image_path, 'rb')}
+    params = {
+        "uov_method": "Upscale (2x)",
+        "async_process": False
+    }
+    response = requests.post(url, files=files, data=params)
+    if response.status_code != 200:
+        raise Exception("Failed to upscale image")
+    
+    print("Waiting for the upscaled image...")
+    while True:
+        current_files = set(os.listdir(folder_path))
+        new_files = current_files - existing_files
+        if new_files:
+            upscaled_image_path = os.path.join(folder_path, new_files.pop())
+            print(f"Upscaled image detected: {upscaled_image_path}")
+            return upscaled_image_path
+        time.sleep(1)
 
 # Function to process all pull_* files in the dump folder
 def process_all_files():
@@ -85,5 +163,5 @@ def process_all_files():
         time.sleep(2)
 
 # Main script
-if __name__ == "__extract__":
+if __name__ == "__main__":
     process_file()
