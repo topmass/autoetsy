@@ -3,6 +3,7 @@ import json
 import base64
 from pathlib import Path
 import time
+import os
 
 import requests
 import json
@@ -36,7 +37,7 @@ def check_job_status(job_id: str) -> dict:
             return status
         time.sleep(5)  # Adjust sleep time as needed
 
-def upscale_image_v2(image_url: str, uov_method: str = "Upscale (1.5x)") -> dict:
+def upscale_image_v2(image_url: str, uov_method: str = "Upscale (Fast 2x)") -> dict:
     """
     Upscale the generated image using V2 endpoint.
     """
@@ -58,7 +59,9 @@ with open('image_gen_prompt.md', 'r') as file:
 params = {
     "prompt": prompt_text,
     "async_process": True,
-    "style_selections": ["Artstyle Impressionist", "Fooocus V2"]
+    "style_selections": ["Artstyle Impressionist", "Artstyle Pointillism"],
+    "aspect_ratios_selection": '2100*1500',
+    "generation_speed": "fast",  # Added selector for fast generation
 }
 # After generating the image with text2img function
 job_response = text2img(params)
@@ -69,11 +72,15 @@ if job_response.get('job_id'):
         image_url = job_status.get('job_result', [{}])[0].get('url')
         if image_url:
             # Send the image to the upscale API using V2 endpoint with 1.5x upscale
-            upscale_response = upscale_image_v2(image_url, "Upscale (1.5x)")
+            upscale_response = upscale_image_v2(image_url, "Upscale (Fast 2x)")
             if upscale_response.get('job_id'):
                 # Check the status of the upscale job
                 upscale_status = check_job_status(upscale_response['job_id'])
-                print(upscale_status)
+                if upscale_status.get('job_stage') == 'SUCCESS':
+                    # Print the upscale response upon successful completion
+                    print("Upscale job completed successfully. Response:", upscale_response)
+                else:
+                    print("Upscale job did not complete successfully.")
             else:
                 print("Failed to initiate upscale job.")
         else:

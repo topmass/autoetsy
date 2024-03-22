@@ -88,5 +88,5 @@ for file_path in glob.glob(file_pattern):
     # Write the collected output to the specified markdown file.
     # We open the file in append mode ('a') to ensure that content from multiple HTML files
     # is appended to the same markdown file instead of overwriting it.
-    with open(markdown_file_name, 'a', encoding='utf-8') as md_file:
+    with open(markdown_file_name, 'w', encoding='utf-8') as md_file:
         md_file.write('\n'.join(output_content) + '\n\n')
