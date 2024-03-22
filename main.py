@@ -139,12 +139,14 @@ if __name__ == "__main__":
     mockupgen = subprocess.run(["python", "mockupgen.py"], check=True, capture_output=True, text=True)
     print(mockupgen.stdout)
     print("Mockups generated successfully.")
+
+
     # Function to create a folder and move images
     def create_folder_and_move_images(base_name, today_date):
         # Remove "pull_" prefix if present
         folder_name = base_name.replace("pull_", "")
         # Define the new folder path
-        new_folder_path = os.path.join("directory/export", folder_name)
+        new_folder_path = os.path.join("export/", folder_name)
         # Create the folder if it doesn't exist
         os.makedirs(new_folder_path, exist_ok=True)
         

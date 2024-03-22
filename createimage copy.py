@@ -3,9 +3,12 @@ import json
 import base64
 from pathlib import Path
 import time
-
+import os
+from pathlib import Path
+import re
 import requests
 import json
+from datetime import datetime  # Modify the import statement at the beginning of your file
 
 # Vincent diagram example
 host = "http://127.0.0.1:8888"
@@ -34,22 +37,21 @@ def check_job_status(job_id: str) -> dict:
         
         if status['job_stage'] in ['COMPLETED', 'FAILED', 'SUCCESS']:
             return status
-        time.sleep(5)  # Adjust sleep time as needed
+        time.sleep(2)  # Adjust sleep time as needed
 
-def upscale_image(image_url: str, uov_method: str = "Upscale (2x)") -> dict:
+def upscale_image_v2(image_url: str, uov_method: str = "Upscale (Fast 2x)") -> dict:
     """
-    Upscale the generated image.
+    Upscale the generated image using V2 endpoint.
     """
-    # Assuming the image is publicly accessible via URL, we directly use the URL.
-    # If the image is not publicly accessible, you would need to download it and then upload it as part of the request.
     params = {
         "input_image": image_url,
         "uov_method": uov_method,
         "async_process": True  # To process the job asynchronously
     }
-    response = requests.post(url=f"{host}/v1/generation/image-upscale-vary",
+    response = requests.post(url=f"{host}/v2/generation/image-upscale-vary",
                              data=json.dumps(params),
-                             headers={"Content-Type": "application/json"})
+                             headers={"Content-Type": "application/json"},
+                             timeout=300)
     return response.json()
 
 # Read the prompt from 'image_gen_prompt.md'
@@ -59,22 +61,41 @@ with open('image_gen_prompt.md', 'r') as file:
 params = {
     "prompt": prompt_text,
     "async_process": True,
-    "style_selections": ["Artstyle Impressionist", "Fooocus V2"]
+    "style_selections": ["Artstyle Impressionist", "Artstyle Pointillism"],
+    "aspect_ratios_selection": '2100*1500',
+    "generation_speed": "fast",  # Added selector for fast generation
 }
 # After generating the image with text2img function
 job_response = text2img(params)
 if job_response.get('job_id'):
     job_status = check_job_status(job_response['job_id'])
     if job_status.get('job_stage') == 'SUCCESS':
+        directory_path = Path(f"focusgen/{datetime.now().strftime('%Y-%m-%d')}")
+    
+    
+        # Regular expression to match files ending with _<4digits>.png
+        pattern = re.compile(r"_\d{4}\.png$")
+        
+        # Iterate over all files in the directory matching the pattern
+        for file_path in directory_path.iterdir():
+            if file_path.is_file() and pattern.search(file_path.name):
+                os.remove(file_path)
+                print(f"Deleted PNG file: {file_path.name}")
+        # os remove the last image saved to folder focusgen/{todays_date} ending in .png
+        
         # Assuming the job_result contains a URL to the generated image
         image_url = job_status.get('job_result', [{}])[0].get('url')
         if image_url:
-            # Send the image to the upscale API
-            upscale_response = upscale_image(image_url)
+            # Send the image to the upscale API using V2 endpoint with 1.5x upscale
+            upscale_response = upscale_image_v2(image_url, "Upscale (Fast 2x)")
             if upscale_response.get('job_id'):
                 # Check the status of the upscale job
                 upscale_status = check_job_status(upscale_response['job_id'])
-                print(upscale_status)
+                if upscale_status.get('job_stage') == 'SUCCESS':
+                    # Print the upscale response upon successful completion
+                    print("Upscale job completed successfully. Response:", upscale_response)
+                else:
+                    print("Upscale job did not complete successfully.")
             else:
                 print("Failed to initiate upscale job.")
         else:
@@ -83,4 +104,3 @@ if job_response.get('job_id'):
         print("Text-to-image job did not complete successfully.")
 else:
     print("Failed to initiate text-to-image job.")
-

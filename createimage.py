@@ -4,9 +4,11 @@ import base64
 from pathlib import Path
 import time
 import os
-
+from pathlib import Path
+import re
 import requests
 import json
+from datetime import datetime  # Modify the import statement at the beginning of your file
 
 # Vincent diagram example
 host = "http://127.0.0.1:8888"
@@ -35,7 +37,7 @@ def check_job_status(job_id: str) -> dict:
         
         if status['job_stage'] in ['COMPLETED', 'FAILED', 'SUCCESS']:
             return status
-        time.sleep(5)  # Adjust sleep time as needed
+        time.sleep(2)  # Adjust sleep time as needed
 
 def upscale_image_v2(image_url: str, uov_method: str = "Upscale (Fast 2x)") -> dict:
     """
@@ -68,6 +70,19 @@ job_response = text2img(params)
 if job_response.get('job_id'):
     job_status = check_job_status(job_response['job_id'])
     if job_status.get('job_stage') == 'SUCCESS':
+        directory_path = Path(f"focusgen/{datetime.now().strftime('%Y-%m-%d')}")
+    
+    
+        # Regular expression to match files ending with _<4digits>.png
+        pattern = re.compile(r"_\d{4}\.png$")
+        
+        # Iterate over all files in the directory matching the pattern
+        for file_path in directory_path.iterdir():
+            if file_path.is_file() and pattern.search(file_path.name):
+                os.remove(file_path)
+                print(f"Deleted PNG file: {file_path.name}")
+        # os remove the last image saved to folder focusgen/{todays_date} ending in .png
+        
         # Assuming the job_result contains a URL to the generated image
         image_url = job_status.get('job_result', [{}])[0].get('url')
         if image_url:
