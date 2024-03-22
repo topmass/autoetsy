@@ -51,6 +51,42 @@ def composite_image_with_mockup(input_image_path, mockupfill_path, mockup_path, 
     final_image.save(output_path, 'PNG')
     print(f"Composite image created and saved as {output_path}.")
 
+def composite_image_with_mockup_closeup(input_image_path, mockupfill_path, mockup_path, output_path):
+    # Load the input image
+    try:
+        input_image = Image.open(input_image_path)
+    except FileNotFoundError:
+        print(f"Input image {input_image_path} not found.")
+        return
+
+    # Load the mockupfill image
+    try:
+        mockupfill = Image.open(mockupfill_path)
+    except FileNotFoundError:
+        print(f"Mockup fill image {mockupfill_path} not found.")
+        return
+
+    # Paste the input image onto mockupfill.png aligning the bottom-left corner
+    mockupfill.paste(input_image, (0, mockupfill.height - input_image.height))
+
+    # Load the mockup.png
+    try:
+        mockup = Image.open(mockup_path)
+    except FileNotFoundError:
+        print(f"Mockup image {mockup_path} not found.")
+        return
+
+    # Ensure both images are in 'RGBA' to support transparency in compositing
+    mockupfill_converted = mockupfill.convert('RGBA')
+    mockup_converted = mockup.convert('RGBA')
+
+    # Composite mockup.png on top of the modified mockupfill.png
+    final_image = Image.alpha_composite(mockupfill_converted, mockup_converted)
+
+    # Save the final composite image
+    final_image.save(output_path, 'PNG')
+    print(f"Closeup composite image created and saved as {output_path}.")
+
 # Assuming the root directory is 'c:/code/etsy/', as indicated by your command prompt
 root_directory = 'c:/code/etsy/'
 
@@ -69,6 +105,11 @@ try:
                 output_path = os.path.join(directory_path, f'result_mockup{i}.png')
                 composite_image_with_mockup(image_path, mockupfill_path, mockup_path, output_path)
             image_found = True
+            # Generate the closeup mockup
+            mockupfill_path = os.path.join(root_directory, 'mockup5fill.png')
+            mockup_path = os.path.join(root_directory, 'mockup5.png')
+            output_path = os.path.join(directory_path, 'result_mockup5.png')
+            composite_image_with_mockup_closeup(image_path, mockupfill_path, mockup_path, output_path)
             break
     if not image_found:
         print("No image file ending with _5x7.jpg found in today's directory.")
