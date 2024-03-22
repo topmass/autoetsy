@@ -107,13 +107,15 @@ if __name__ == "__main__":
     while not mistral_response_printed:
         time.sleep(1)  # Wait for 1 second before checking again
 
-    # Execute image generation with fooocus API and print output
-    process = subprocess.run(["python", "createimage.py"], check=True, capture_output=True, text=True)
-    print(process.stdout)  # Print the standard output of createimage.py
-    print("Image created and upscaled successfully!")
-    focusgen_response_printed = True  # Set the flag to True after printing the response
-    
-   
+    # Adjusted subprocess call to execute createimage.py without capturing output
+    # This allows createimage.py to interact directly with the terminal
+    try:
+        subprocess.run(["python", "createimage.py"], check=True)
+        print("Image created and upscaled successfully!")
+        focusgen_response_printed = True  # Set the flag to True after printing the response
+    except subprocess.CalledProcessError as e:
+        print(f"Error executing createimage.py: {e}")
+
     # Use glob to find the latest image in today's date folder
     images_path = f"focusgen/{today_date}/*.png"
     list_of_images = glob.glob(images_path)
@@ -142,12 +144,11 @@ if __name__ == "__main__":
 
 
     # Function to create a folder and move images
-    def create_folder_and_move_images(base_name, today_date):
-        # Remove "pull_" prefix if present
-        folder_name = base_name.replace("pull_", "")
-        # Define the new folder path
+    def create_folder_and_move_images(today_date):
+        from random import randint
+        # Generate a random 4-digit folder name
+        folder_name = f"{randint(1000, 9999)}"  # Ensures a 4-digit number
         new_folder_path = os.path.join("export/", folder_name)
-        # Create the folder if it doesn't exist
         os.makedirs(new_folder_path, exist_ok=True)
         
         # Define the source path where images are currently stored
@@ -160,6 +161,81 @@ if __name__ == "__main__":
             shutil.move(os.path.join(source_path, image_file), os.path.join(new_folder_path, image_file))
         
         print(f"All images moved to {new_folder_path}.")
+        return new_folder_path
 
-    # Call the function after mockupgen.py execution
-    create_folder_and_move_images(base_name, today_date)
+    # Call the function after mockupgen.py execution and store the returned path in a variable
+    new_folder_path = create_folder_and_move_images(today_date)
+
+    # Utility function to read file contents
+    def read_file_contents(file_path):
+        with open(file_path, 'r', encoding='utf-8') as file:
+            return file.read()
+
+    # Adjusted make_ollama_call function
+    print("Using Ollama to generate Title and Tags...")
+    def make_ollama_call(new_folder_path):
+        # Read the contents of the files
+        extracted_html_text = read_file_contents('extracted_html_text.md')
+        image_gen_prompt = read_file_contents('image_gen_prompt.md')
+        
+        # Concatenate the contents with a newline between them
+        userprompt_content = f"Here is the extracted_html_text.md file:\n{extracted_html_text}\n\nHere is the image_gen_prompt.md file:\n{image_gen_prompt}"
+
+        
+        # Ollama chat call (assuming the rest of the function setup is correct and remains unchanged)
+        response = ollama.chat(
+            model='mistral-openorca',
+            messages=[
+                {
+                    'role': 'system',
+                    'content': """ 
+                    Objective: Your task is to generate a new product listing for Etsy. This involves crafting product tags and a new product title. You will work with two files:
+  - The first file, named `{extracted_html_text}`, contains the title and some tags from another best-selling product in the desired category. This serves as a template for the format and category relevance of your new product.
+  - The second file, named `{image_gen_prompt}`, provides a description of the new product's image.
+
+Process Overview:
+  - Extract Information: Begin by reading the content from the two specified files.
+    - From `{extracted_html_text}`, note the product title's format and the pre-existing tags related to the product category. Understand that these are your templates for format and category alignment.
+    - From `{image_gen_prompt}`, extract the new image description to use as the basis for your new product title and tags.
+
+  - Tag Generation: 
+    - Use the first six tags from the best-selling product as a starting point. These tags, extracted from the `{extracted_html_text}` file, anchor your new product in the desired category(do not use any tags including the original product authors name like "mitartprints" "northprints" etc).
+    - Generate seven new tags based on the new image description in the `{image_gen_prompt}` file. These should be relevant to the Etsy product category and specifically tailored to the new product's features and appeal.
+
+  - Title Creation:
+    - Develop a new product title using the format of the best-selling product's title as a guide. However, tailor the title to reflect the new product's features as described in the new image description. This title should be catchy, relevant, and designed to attract Etsy shoppers.
+
+Output Format:
+  - Present the results in the following structured format:
+
+Title: [New product title inspired by the format of the best-selling product and tailored to the new image description]
+
+Tags: [Combine the six pre-existing tags from the best-selling product with the seven new tags you've generated, for example: Handmade, eco-friendly, custom design, digital print, unique gift, vintage-inspired, art deco, modern decor, personalized option, home styling, office accessory, collector's item, limited edition]
+
+Guidelines:
+  - Ensure the new tags encompass a variety of aspects related to the product, such as design, use, and target audience.
+  - The new product title should be influenced by the best-selling product's title format but must accurately reflect the essence and uniqueness of the new product based on the new image description.
+  - Creativity and insight are crucial for generating appealing tags and titles that will stand out to Etsy shoppers, increasing visibility and attractiveness of the new product.
+  """,
+                },
+                {
+                    'role': 'user',
+                    'content': userprompt_content,
+                },
+            ]
+        )
+        
+        # Save the response in the new folder
+        final_output_path = os.path.join(new_folder_path, 'tagsandtitle.md')
+        with open(final_output_path, 'w') as final_file:
+            final_file.write(response['message']['content'])
+        
+        print(response['message']['content'])
+
+    # Ensure 'new_folder_path' is correctly defined before calling make_ollama_call()
+    make_ollama_call(new_folder_path)  # Pass the folder path as an argument
+    # os remove any images inside extracted_images folder
+    for image in os.listdir('extracted_images'):
+        os.remove(os.path.join('extracted_images', image))
+
+    print("Done!")
