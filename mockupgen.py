@@ -52,43 +52,49 @@ def composite_image_with_mockup(input_image_path, mockupfill_path, mockup_path, 
     print(f"Composite image created and saved as {output_path}.")
 
 def composite_image_with_mockup_closeup(input_image_path, mockupfill_path, mockup_path, output_path):
-    # Load the input image
     try:
         input_image = Image.open(input_image_path)
     except FileNotFoundError:
         print(f"Input image {input_image_path} not found.")
         return
 
-    # Load the mockupfill image
     try:
         mockupfill = Image.open(mockupfill_path)
     except FileNotFoundError:
         print(f"Mockup fill image {mockupfill_path} not found.")
         return
 
-    # Paste the input image onto mockupfill.png aligning the bottom-left corner
-    mockupfill.paste(input_image, (0, mockupfill.height - input_image.height))
+    transparent_image = Image.new('RGBA', mockupfill.size, (0, 0, 0, 0))
+    diff = ImageChops.difference(mockupfill.convert('RGBA'), transparent_image)
+    bbox = diff.getbbox()
 
-    # Load the mockup.png
+    if bbox:
+        center_x = (bbox[2] + bbox[0]) // 2
+        center_y = (bbox[3] + bbox[1]) // 2
+
+        zoom_factor = 1.5 * 1.4
+        input_image_zoomed = input_image.resize((int(input_image.width * zoom_factor), int(input_image.height * zoom_factor)))
+
+        # Calculate the position to paste the zoomed input image centered horizontally but offset downwards
+        paste_x = center_x - input_image_zoomed.width // 2
+        # Adjust paste_y to move the image downwards from the vertical center, but not exactly at the bottom
+        offset_downwards = (bbox[3] - center_y) // 4  # Adjust this divisor to control how far down it moves
+        paste_y = center_y - input_image_zoomed.height // 2 + offset_downwards
+
+        mockupfill.paste(input_image_zoomed, (paste_x, paste_y))
+
     try:
         mockup = Image.open(mockup_path)
     except FileNotFoundError:
         print(f"Mockup image {mockup_path} not found.")
         return
 
-    # Ensure both images are in 'RGBA' to support transparency in compositing
     mockupfill_converted = mockupfill.convert('RGBA')
     mockup_converted = mockup.convert('RGBA')
 
-    # Composite mockup.png on top of the modified mockupfill.png
     final_image = Image.alpha_composite(mockupfill_converted, mockup_converted)
-
-    # Save the final composite image
     final_image.save(output_path, 'PNG')
     print(f"Closeup composite image created and saved as {output_path}.")
-
-# Assuming the root directory is 'c:/code/etsy/', as indicated by your command prompt
-root_directory = 'c:/code/etsy/'
 
 # Search for the image file
 try:
@@ -100,14 +106,14 @@ try:
             image_path = os.path.join(directory_path, file_name)
             # Iterate over mockup and mockup fill pairs
             for i in range(1, 5):  # For mockup1.png to mockup4.png
-                mockupfill_path = os.path.join(root_directory, f'mockup{i}fill.png')
-                mockup_path = os.path.join(root_directory, f'mockup{i}.png')
+                mockupfill_path = f'mockup{i}fill.png'
+                mockup_path = f'mockup{i}.png'
                 output_path = os.path.join(directory_path, f'result_mockup{i}.png')
                 composite_image_with_mockup(image_path, mockupfill_path, mockup_path, output_path)
             image_found = True
             # Generate the closeup mockup
-            mockupfill_path = os.path.join(root_directory, 'mockup5fill.png')
-            mockup_path = os.path.join(root_directory, 'mockup5.png')
+            mockupfill_path = 'mockup5fill.png'
+            mockup_path = 'mockup5.png'
             output_path = os.path.join(directory_path, 'result_mockup5.png')
             composite_image_with_mockup_closeup(image_path, mockupfill_path, mockup_path, output_path)
             break

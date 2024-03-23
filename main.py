@@ -54,6 +54,7 @@ def process_file():
         for i in range(1, 2):
             response = ollama.chat(
                 model='llava',
+                keep_alive=0,
                 messages=[
                     {
                         'role': 'user',
@@ -78,14 +79,15 @@ def process_file():
         # Generate a new description by passing the contents of the described file
         response = ollama.chat(
             model=(local_model),
+            keep_alive=0,
             messages=[
                 {
                     'role': 'user',
-                    'content': f"<|user|> \n {described_contents} \n  <|endoftext|> \n <|assistant|>",
+                    'content': f"{described_contents}",
                 },
                 {
                     'role': 'system',
-                    'content': "<|system|> \n The following is a painting description. I'm seeking to refine a prompt for an image generation model to ensure it focuses exclusively on the artistic content of paintings. The aim is to generate a description or images that capture the scene depicted in the artwork, including subjects, setting, mood, and narrative elements. It is crucial to omit any references to the print company, the material of the print (e.g., canvas, paper), the type of frame, or how it's displayed. The focus should be solely on the artwork's scene. For example, if the original summary includes 'Printed by XYZ Company on high-quality canvas, framed in a modern black frame, depicting a serene lakeside sunset,' the refined prompt should only describe 'a serene lakeside sunset.' This approach will ensure that the model's output remains focused on the artistic depiction rather than extraneous details. always begin your reply ONLY with \"an oil painting of ...\" and then continue describing the artwork (always be consice in your description and only one short paragraph, no line breaks) \n <|endoftext|>",
+                    'content': "The following is a painting description. I'm seeking to refine a prompt for an image generation model to ensure it focuses exclusively on the artistic content of paintings. The aim is to generate a description or images that capture the scene depicted in the artwork, including subjects, setting, mood, and narrative elements. It is crucial to omit any references to the print company, the material of the print (e.g., canvas, paper), the type of frame, or how it's displayed. The focus should be solely on the artwork's scene. For example, if the original summary includes 'Printed by XYZ Company on high-quality canvas, framed in a modern black frame, depicting a serene lakeside sunset,' the refined prompt should only describe 'a serene lakeside sunset.' This approach will ensure that the model's output remains focused on the artistic depiction rather than extraneous details. always begin your reply ONLY with \"an impressionistic, vintage style oil painting with a subdued, earthy color scheme. The technique should convey texture and dimension, ...\" and then continue describing the artwork (always be consice in your description and only one short paragraph, no line breaks)",
                 },
             ]
         )
@@ -185,6 +187,7 @@ if __name__ == "__main__":
         # Ollama chat call (assuming the rest of the function setup is correct and remains unchanged)
         response = ollama.chat(
             model='mistral-openorca',
+            keep_alive=0,
             messages=[
                 {
                     'role': 'system',
