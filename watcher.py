@@ -42,7 +42,7 @@ class RenameHTMLHandler(FileSystemEventHandler):
         self.process_file(new_path)
 
 if __name__ == "__main__":
-    run_count = int(input("How many times do you want to run main.py? "))
+    run_count = int(input("How many products would you like to create per html file? "))
     print("Waiting for product HTML dumps...")
     path = 'dump'
     event_handler = RenameHTMLHandler(run_count, path)
