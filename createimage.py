@@ -32,18 +32,10 @@ def find_latest_jpg_image(directory: str) -> str:
     latest_file = max(list_of_jpg, key=os.path.getmtime)
     return latest_file
 
-def text2img(params: dict, image_prompt: str = None) -> dict:
+def text2img(params: dict) -> dict:
     """
-    Image Generation with optional image prompt.
+    Image Generation without an image prompt.
     """
-    if image_prompt:
-        params['image_prompts'] = [{
-            "cn_img": image_prompt,
-            "cn_stop": 0.6,
-            "cn_weight": 0.6,
-            "cn_type": "ImagePrompt"
-        }]
-    
     result = requests.post(url=f"{host}/v2/generation/text-to-image-with-ip",
                            data=json.dumps(params),
                            headers={"Content-Type": "application/json"})
@@ -122,10 +114,11 @@ try:
         "async_process": True,
         "style_selections": ["Artstyle Impressionist",],
         "aspect_ratios_selection": '2100*1500',
-        "generation_speed": "fast",  # Added selector for fast generation
+        "generation_speed": "fast",  # Added selector for fast generation,
+        "negative_prompt": "signature, name, signed, watermark",
     }
     # After generating the image with text2img function, now including an image prompt
-    job_response = text2img(params, encoded_image)
+    job_response = text2img(params)
     if job_response.get('job_id'):
         print("Starting image generation...")
         job_status = check_job_status(job_response['job_id'], "generation")
