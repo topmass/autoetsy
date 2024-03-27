@@ -15,7 +15,7 @@ import re  # Import regular expressions module
 # Global flag to indicate if the Mistral model's response has been printed
 mistral_response_printed = False
 focusgen_response_printed = False
-local_model = 'orca-mini'
+local_model = 'rhysjones/phi-2-orange'
 today_date = datetime.today().strftime('%Y-%m-%d')
 
 # Function to run a script with a filename argument and capture its output
@@ -82,19 +82,26 @@ def process_file():
             keep_alive=0,
             messages=[
                 {
-                    'role': 'user',
-                    'content': f"{described_contents}",
+                    'role': 'system',
+                    'content': f"<|im_start|>system \n The following is a painting description. I'm seeking to refine a prompt for an image generation model to ensure it focuses exclusively on the artistic content of paintings. The aim is to generate a description or images that capture the scene depicted in the artwork, including subjects, setting, mood, and narrative elements. It is crucial to omit any references to the print company, the type of frame, how it's displayed or any perceived emotion that coudl be invoked. The focus should be solely on the artwork's scene. For example, if the original summary includes 'Printed by XYZ Company, framed in a modern black frame, depicting a serene lakeside sunset,' the refined prompt should only describe 'a serene lakeside sunset.' This approach will ensure that the model's output remains focused on the artistic depiction rather than extraneous details. always begin your reply ONLY with \"Impressionistic oil painting on canvas with visible texture and dimension, ...\" and then continue describing the artwork (always be consice in your description and only one short paragraph, no line breaks) <|im_end|>",
                 },
                 {
-                    'role': 'system',
-                    'content': "The following is a painting description. I'm seeking to refine a prompt for an image generation model to ensure it focuses exclusively on the artistic content of paintings. The aim is to generate a description or images that capture the scene depicted in the artwork, including subjects, setting, mood, and narrative elements. It is crucial to omit any references to the print company, the material of the print (e.g., canvas, paper), the type of frame, or how it's displayed. The focus should be solely on the artwork's scene. For example, if the original summary includes 'Printed by XYZ Company on high-quality canvas, framed in a modern black frame, depicting a serene lakeside sunset,' the refined prompt should only describe 'a serene lakeside sunset.' This approach will ensure that the model's output remains focused on the artistic depiction rather than extraneous details. always begin your reply ONLY with \"an impressionistic, vintage style oil painting with a subdued, earthy color scheme. The technique should convey texture and dimension, ...\" and then continue describing the artwork (always be consice in your description and only one short paragraph, no line breaks)",
+                    'role': 'user',
+                    'content': f"<|im_start|>user Use the following description and make a short concise prompt for our image gen model. \n {described_contents} <|im_end|>",
                 },
+                {
+                    'role': 'assistant',
+                    'content': "<|im_start|>assistant",
+                },
+                
             ]
         )
 
         # Save the Mistral output to a new file as our final output for image generation prompt
         with open('image_gen_prompt.md', 'w') as final_file:
-            final_file.write(response['message']['content'])
+            # Trim leading and trailing whitespace from the response content before writing
+            trimmed_content = response['message']['content'].strip()
+            final_file.write(trimmed_content)
 
         print(response['message']['content'])
         mistral_response_printed = True  # Set the flag to True after printing the response

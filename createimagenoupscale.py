@@ -67,7 +67,7 @@ params = {
     "guidance_scale": 5,
     "sharpness": 10,
     "negative_prompt": "unrealistic, saturated, sketch, cartoon, anime, manga, render, watermark, signature, label, artist signature",
-    "aspect_ratios_selection": '4200*3000',
+    "aspect_ratios_selection": '2000*1500',
     "performance_selection": "Speed",
 }
 

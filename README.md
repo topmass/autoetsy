@@ -43,3 +43,5 @@ python main.py
 You will need to conda activate fooocus-api each time you want to run main.py in the fooocus-api folder to start the image gen server
 
 Remember to change the config.txt in fooocus-api folder to point to the focusgen folder inside autoetsy
+
+Make sure to UPDATE your fooocus image gen model to the more optimal juggernautV8 - here is the download link and how to add it to your files: https://civitai.com/models/133005?modelVersionId=288982 - place this file inside fooocus-api/repositories/fooocus/models/checkpoints folder - the code already looks for it when generating images, if it is not there the code will default to juggernautV6
