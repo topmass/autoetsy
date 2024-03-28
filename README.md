@@ -49,6 +49,7 @@ Juggernaut download link: https://civitai.com/models/133005?modelVersionId=28898
 
 Next install our LORA for oil paintings into
 fooocus-api/repositories/fooocus/models/loras/
+oil painting lora download link: https://civitai.com/models/84542/oil-paintingoil-brush-stroke
 
 You will need to conda activate "etsy" or whichever name you used for our python 3.10 conda environment each time you want to run main.py in the fooocus-api folder to start the image generation server before starting main.py inside autoetsy
 
