@@ -100,62 +100,67 @@ def upscale_image_v2(image_url: str, uov_method: str = "Upscale (2x)") -> dict:
                              timeout=300)
     return response.json()
 
-# Read the prompt from 'image_gen_prompt.md'
-with open('image_gen_prompt.md', 'r') as file:
-    prompt_text = file.read().strip()
-
+# Read the prompt from 'image_gen_prompt.md' and prepare it for text-based image generation
 try:
-    image_directory = 'extracted_images'
-    image_path = find_latest_jpg_image(image_directory)
-    encoded_image = encode_image_to_base64(image_path)
-
-    params = {
-    "prompt": prompt_text,
-    "async_process": True,
-    "style_selections": ['Fooocus Sharp', 'Artstyle Impressionist'],
-    "base_model_name": "juggernautXL_v8Rundiffusion.safetensors",
-    "guidance_scale": 5,
-    "sharpness": 10,
-    "negative_prompt": "unrealistic, saturated, sketch, cartoon, anime, manga, render, watermark, signature, label, artist signature",
-    "aspect_ratios_selection": '2000*1500',
-    "performance_selection": "Speed",
-    }
-    # After generating the image with text2img function, now including an image prompt
-    job_response = text2img(params)
-    if job_response.get('job_id'):
-        print("Starting image generation...")
-        job_status = check_job_status(job_response['job_id'], "generation")
-        if job_status.get('job_stage') == 'SUCCESS':
-            directory_path = Path(f"focusgen/{datetime.now().strftime('%Y-%m-%d')}")
-            # Regular expression to match files ending with _<4digits>.png
-            pattern = re.compile(r"_\d{4}\.png$")
-            # Iterate over all files in the directory matching the pattern
-            for file_path in directory_path.iterdir():
-                if file_path.is_file() and pattern.search(file_path.name):
-                    os.remove(file_path)
-                    print(f"Deleted PNG file: {file_path.name}")
-            # os remove the last image saved to folder focusgen/{todays_date} ending in .png
-            
-            print("Image generation completed. Starting upscaling...")
-            # Assuming the job_result contains a URL to the generated image
-            image_url = job_status.get('job_result', [{}])[0].get('url')
-            if image_url:
-                # Send the image to the upscale API using V2 endpoint with 1.5x upscale
-                upscale_response = upscale_image_v2(image_url, "Upscale (Fast 2x)")
-                if upscale_response.get('job_id'):
-                    # Check the status of the upscale job with a different process type
-                    upscale_status = check_job_status(upscale_response['job_id'], "upscaling")
-                    if upscale_status.get('job_stage') == 'SUCCESS':
-                        print("Upscaling completed successfully.")
-                    else:
-                        print("Upscaling did not complete successfully.")
-                else:
-                    print("Failed to initiate upscaling job.")
-            else:
-                print("No image URL found in job result.")
-        else:
-            print("Text-to-image job did not complete successfully.")
-    else:
-        print("Failed to initiate text-to-image job.")
+    with open('image_gen_prompt.md', 'r') as file:
+        prompt_text = file.read().strip()
 except FileNotFoundError as e:
-    print(e)
+    print(f"Error opening file: {e}")
+    prompt_text = ""  # Ensure prompt_text is defined even if file read fails
+
+# Ensure prompt_text is now ready for use in the subsequent image generation process
+    
+params = {
+"prompt": prompt_text,
+"async_process": True,
+"style_selections": ['Fooocus Sharp', 'Artstyle Impressionist'],
+"base_model_name": "juggernautXL_v8Rundiffusion.safetensors",
+"loras": [
+    {
+        "model_name": 'bichu-v0612.safetensors',
+        "weight": '1.5',
+    }
+],
+"guidance_scale": 5,
+"sharpness": 10,
+"negative_prompt": "unrealistic, saturated, sketch, cartoon, anime, manga, render, watermark, signature, label, artist signature",
+"aspect_ratios_selection": '2000*1500',
+"performance_selection": "Speed",
+}
+# After generating the image with text2img function, now including an image prompt
+job_response = text2img(params)
+if job_response.get('job_id'):
+    print("Starting image generation...")
+    job_status = check_job_status(job_response['job_id'], "generation")
+    if job_status.get('job_stage') == 'SUCCESS':
+        directory_path = Path(f"focusgen/{datetime.now().strftime('%Y-%m-%d')}")
+        # Regular expression to match files ending with _<4digits>.png
+        pattern = re.compile(r"_\d{4}\.png$")
+        # Iterate over all files in the directory matching the pattern
+        for file_path in directory_path.iterdir():
+            if file_path.is_file() and pattern.search(file_path.name):
+                os.remove(file_path)
+                print(f"Deleted PNG file: {file_path.name}")
+        # os remove the last image saved to folder focusgen/{todays_date} ending in .png
+        
+        print("Image generation completed. Starting upscaling...")
+        # Assuming the job_result contains a URL to the generated image
+        image_url = job_status.get('job_result', [{}])[0].get('url')
+        if image_url:
+            # Send the image to the upscale API using V2 endpoint with 1.5x upscale
+            upscale_response = upscale_image_v2(image_url, "Upscale (2x)")
+            if upscale_response.get('job_id'):
+                # Check the status of the upscale job with a different process type
+                upscale_status = check_job_status(upscale_response['job_id'], "upscaling")
+                if upscale_status.get('job_stage') == 'SUCCESS':
+                    print("Upscaling completed successfully.")
+                else:
+                    print("Upscaling did not complete successfully.")
+            else:
+                print("Failed to initiate upscaling job.")
+        else:
+            print("No image URL found in job result.")
+    else:
+        print("Text-to-image job did not complete successfully.")
+else:
+    print("Failed to initiate text-to-image job.")
