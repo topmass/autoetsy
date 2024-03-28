@@ -25,7 +25,7 @@ pip install -r requirements.txt
 AutoEtsy repo setup should be done if ollama is installed and models are pulled and you have created the conda environment, activated and installed the requirements file, now onto the foocusapi
 
 FOOOCUS API:
-https://github.com/matthewczeg/autoetsy
+https://github.com/mrhan1993/Fooocus-API
 After git cloning fooocus-api
 CD Into it -> cd fooocus-api
 THEN
