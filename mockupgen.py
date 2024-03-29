@@ -51,8 +51,10 @@ def composite_image_with_mockup(input_image_path, mockupfill_path, mockup_path, 
     final_image.save(output_path, 'PNG')
     print(f"Composite image created and saved as {output_path}.")
 
-def create_zoom_effect_gif(input_image_path, output_gif_path, duration=6, fps=24):  # Duration doubled to reduce speed
+def create_zoom_effect_video(input_image_path, output_video_path, duration=6, fps=24):  # Duration doubled to reduce speed
     from PIL import Image
+    import imageio
+    import numpy as np
 
     # Load and convert the input image
     input_image = Image.open(input_image_path).convert('RGBA')
@@ -70,24 +72,24 @@ def create_zoom_effect_gif(input_image_path, output_gif_path, duration=6, fps=24
 
     frames = []
     total_frames = duration * fps
-    # Calculate the zoom step per frame and reduce the zoom amount by 50%
     zoom_step = (512 - min(scaled_width, scaled_height)) / total_frames / 4  # Zoom amount reduced by 50%
 
     for frame in range(total_frames):
-        # Calculate the crop size for the current frame
         current_size = min(scaled_width, scaled_height) + frame * zoom_step
         current_left = max(0, (scaled_width - current_size) // 2)
         current_top = max(0, (scaled_height - current_size) // 2)
         
-        # Crop and resize to create the zoom effect
         frame_image = scaled_image.crop((current_left, current_top, current_left + current_size, current_top + current_size))
         frame_image = frame_image.resize((512, 512))
         
         frames.append(frame_image)
     
-    # Save the frames as a GIF
-    frames[0].save(output_gif_path, save_all=True, append_images=frames[1:], optimize=False, duration=int(1000/fps), loop=0)
-    print(f"Zoom effect GIF created and saved as {output_gif_path}.")
+    # Convert PIL images to numpy arrays as required by imageio
+    frames = [imageio.core.util.Array(np.array(frame)) for frame in frames]
+
+    # Save the frames as an MP4 video
+    imageio.mimwrite(output_video_path, frames, fps=fps, format='mp4')
+    print(f"Zoom effect video created and saved as {output_video_path}.")
 
 # Search for the image file
 try:
@@ -103,8 +105,8 @@ try:
                 output_path = os.path.join(directory_path, f'result_mockup{i}.png')
                 composite_image_with_mockup(image_path, mockupfill_path, mockup_path, output_path)
             image_found = True
-            output_gif_path = os.path.join(directory_path, 'result_mockup5.gif')
-            create_zoom_effect_gif(image_path, output_gif_path)
+            output_video_path = os.path.join(directory_path, 'result_mockup5.mp4')
+            create_zoom_effect_video(image_path, output_video_path)
             break
     if not image_found:
         print("No image file ending with _5x7.jpg found in today's directory.")
