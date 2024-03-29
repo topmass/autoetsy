@@ -1,0 +1,11 @@
+# Ignore everything in these directories
+dump/*
+export/*
+extracted_images/*
+focusgen/*
+
+# Except the .keep files, so the directories are included in the repository
+!dump/.keep
+!export/.keep
+!extracted_images/.keep
+!focusgen/.keep

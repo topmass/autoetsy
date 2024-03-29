@@ -51,43 +51,50 @@ def composite_image_with_mockup(input_image_path, mockupfill_path, mockup_path, 
     final_image.save(output_path, 'PNG')
     print(f"Composite image created and saved as {output_path}.")
 
-def create_zoom_effect_gif(input_image_path, output_gif_path, duration=6, fps=24):  # Duration doubled to reduce speed
-    from PIL import Image
+def composite_image_with_mockup_closeup(input_image_path, mockupfill_path, mockup_path, output_path):
+    try:
+        input_image = Image.open(input_image_path)
+    except FileNotFoundError:
+        print(f"Input image {input_image_path} not found.")
+        return
 
-    # Load and convert the input image
-    input_image = Image.open(input_image_path).convert('RGBA')
-    
-    # Scale down the input image by a factor of 3
-    scaled_width = input_image.width // 3
-    scaled_height = input_image.height // 3
-    scaled_image = input_image.resize((scaled_width, scaled_height))
-    
-    # The initial frame will be the scaled image centered and cropped to fit a 512x512 frame if necessary
-    if scaled_width > 512 or scaled_height > 512:
-        initial_crop = scaled_image.crop(((scaled_width - 512) // 2, (scaled_height - 512) // 2, (scaled_width + 512) // 2, (scaled_height + 512) // 2))
-    else:
-        initial_crop = scaled_image
+    try:
+        mockupfill = Image.open(mockupfill_path)
+    except FileNotFoundError:
+        print(f"Mockup fill image {mockupfill_path} not found.")
+        return
 
-    frames = []
-    total_frames = duration * fps
-    # Calculate the zoom step per frame and reduce the zoom amount by 50%
-    zoom_step = (512 - min(scaled_width, scaled_height)) / total_frames / 4  # Zoom amount reduced by 50%
+    transparent_image = Image.new('RGBA', mockupfill.size, (0, 0, 0, 0))
+    diff = ImageChops.difference(mockupfill.convert('RGBA'), transparent_image)
+    bbox = diff.getbbox()
 
-    for frame in range(total_frames):
-        # Calculate the crop size for the current frame
-        current_size = min(scaled_width, scaled_height) + frame * zoom_step
-        current_left = max(0, (scaled_width - current_size) // 2)
-        current_top = max(0, (scaled_height - current_size) // 2)
-        
-        # Crop and resize to create the zoom effect
-        frame_image = scaled_image.crop((current_left, current_top, current_left + current_size, current_top + current_size))
-        frame_image = frame_image.resize((512, 512))
-        
-        frames.append(frame_image)
-    
-    # Save the frames as a GIF
-    frames[0].save(output_gif_path, save_all=True, append_images=frames[1:], optimize=False, duration=int(1000/fps), loop=0)
-    print(f"Zoom effect GIF created and saved as {output_gif_path}.")
+    if bbox:
+        center_x = (bbox[2] + bbox[0]) // 2
+        center_y = (bbox[3] + bbox[1]) // 2
+
+        zoom_factor = 1.4 * 1.1
+        input_image_zoomed = input_image.resize((int(input_image.width * zoom_factor), int(input_image.height * zoom_factor)))
+
+        # Calculate the position to paste the zoomed input image centered horizontally but offset downwards
+        paste_x = center_x - input_image_zoomed.width // 2
+        # Adjust paste_y to move the image downwards from the vertical center, but not exactly at the bottom
+        offset_downwards = (bbox[3] - center_y) // 4  # Adjust this divisor to control how far down it moves
+        paste_y = center_y - input_image_zoomed.height // 2 + offset_downwards
+
+        mockupfill.paste(input_image_zoomed, (paste_x, paste_y))
+
+    try:
+        mockup = Image.open(mockup_path)
+    except FileNotFoundError:
+        print(f"Mockup image {mockup_path} not found.")
+        return
+
+    mockupfill_converted = mockupfill.convert('RGBA')
+    mockup_converted = mockup.convert('RGBA')
+
+    final_image = Image.alpha_composite(mockupfill_converted, mockup_converted)
+    final_image.save(output_path, 'PNG')
+    print(f"Closeup composite image created and saved as {output_path}.")
 
 # Search for the image file
 try:
@@ -97,14 +104,18 @@ try:
         if file_name.endswith("_5x7.jpg"):
             print(f"Found image: {file_name}")
             image_path = os.path.join(directory_path, file_name)
-            for i in range(1, 5):
+            # Iterate over mockup and mockup fill pairs
+            for i in range(1, 5):  # For mockup1.png to mockup4.png
                 mockupfill_path = f'mockup{i}fill.png'
                 mockup_path = f'mockup{i}.png'
                 output_path = os.path.join(directory_path, f'result_mockup{i}.png')
                 composite_image_with_mockup(image_path, mockupfill_path, mockup_path, output_path)
             image_found = True
-            output_gif_path = os.path.join(directory_path, 'result_mockup5.gif')
-            create_zoom_effect_gif(image_path, output_gif_path)
+            # Generate the closeup mockup
+            mockupfill_path = 'mockup5fill.png'
+            mockup_path = 'mockup5.png'
+            output_path = os.path.join(directory_path, 'result_mockup5.png')
+            composite_image_with_mockup_closeup(image_path, mockupfill_path, mockup_path, output_path)
             break
     if not image_found:
         print("No image file ending with _5x7.jpg found in today's directory.")
