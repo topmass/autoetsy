@@ -110,7 +110,7 @@ conda activate yourenvname
 
 (or whichever conda env name you set)
 
-python watcher.py and follow the instructions
+streamlit run watcher.py and follow the instructions
 
 
 
