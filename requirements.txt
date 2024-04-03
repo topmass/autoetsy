@@ -3,5 +3,5 @@ ollama
 Pillow
 Requests==2.31.0
 watchdog==4.0.0
-ImageChops
 dearpygui
+gradio
